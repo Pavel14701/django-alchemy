@@ -1,0 +1,41 @@
+[project]
+name = "django-alchemy"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "adaptix>=3.0.0b11",
+    "alembic>=1.17.1",
+    "dishka>=1.7.2",
+    "django>=5.2.8",
+    "msgspec>=0.19.0",
+    "psycopg>=3.2.12",
+    "sqlalchemy>=2.0.44",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+exclude = ["migrations/*", "tests/*"]
+fix = true
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E203"]
+preview = true
+
+[tool.ruff.format]
+indent-style = "space"
+quote-style = "double"
+skip-magic-trailing-comma = false
+docstring-code-format = true
+docstring-code-line-length = 88
+
+[tool.mypy]
+ignore_missing_imports = true
+
+[dependency-groups]
+dev = [
+    "psycopg2-binary>=2.9.11",
+]
