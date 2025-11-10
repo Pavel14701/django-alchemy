@@ -22,6 +22,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.middleware.common.CommonMiddleware',
     'main.integrations.DishkaMiddleware',
+    'main.infrastructure.middleware.SessionMiddleware',
 ]
 
 ROOT_URLCONF = 'main.urls'
