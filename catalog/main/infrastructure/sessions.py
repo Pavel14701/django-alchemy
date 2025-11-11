@@ -1,92 +1,86 @@
 import json
 from dataclasses import asdict
 from typing import Any, Optional, cast
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from django.http import HttpRequest, HttpResponse
-from redis import Redis  # синхронный клиент
+from redis import Redis
 
-from main.application.interfaces import IGuestSessionBackend, ISessionBackend
+from main.application.interfaces import (
+    IGuestSessionBackend,
+    IRedisSessionBackend,
+)
 from main.domain.entities import SessionData
-from main.infrastructure.cookies import CookieRepo
 
 
-class RedisSessionBackend(ISessionBackend[UUID, SessionData]):
-    """Manages session storage in Redis (sync version)."""
+class RedisSessionBackend(IRedisSessionBackend):
+    """Управление авторизованными сессиями в Redis (синхронная версия)."""
 
     def __init__(self, redis: Redis) -> None:
         self._redis = redis
 
-    def create(self, session_id: UUID, data: SessionData) -> None:
-        """Creates a new session in Redis."""
+    def create(self, id: UUID, data: SessionData, response: HttpResponse) -> UUID:
+        """Создать новую сессию в Redis и записать идентификатор в куки."""
         self._redis.set(
-            name=session_id.hex,
+            name=id.hex,
             value=json.dumps(asdict(data)),
-            ex=3600
+            ex=3600  # TTL 1 час
         )
+        response.set_cookie("auth_session", id.hex, httponly=True)
+        return id
 
-    def read(self, session_id: UUID) -> Optional[SessionData]:
-        session_data = cast(Optional[bytes], self._redis.get(session_id.hex))
+    def read(self, request: HttpRequest) -> Optional[SessionData]:
+        session_id = request.COOKIES.get("auth_session")
+        if not session_id:
+            return None
+        session_data = cast(Optional[bytes], self._redis.get(session_id))
         if session_data is None:
             return None
         return SessionData(**json.loads(session_data.decode("utf-8")))
 
-    def delete(self, session_id: UUID) -> None:
-        """Deletes a session from Redis."""
-        self._redis.delete(session_id.hex)
-
-
-class GuestSessionBackend(IGuestSessionBackend[UUID, dict[str, Any]]):
-    """Handles guest session management using CookieManager (sync version)."""
-
-    def __init__(self, cookie_manager: CookieRepo) -> None:
-        self._cookie_manager = cookie_manager
-
-    def create_guest_session(self, response: HttpResponse) -> UUID:
-        """Creates a new guest session."""
-        session_id = uuid4()
-        self._cookie_manager.set_cookie(
-            response=response,
-            key=self._cookie_manager.GUEST_COOKIE,
-            value=str(session_id)
-        )
-        return session_id
-
-    def get_guest_session(self, request: HttpRequest) -> Optional[UUID]:
-        """Retrieves the current guest session."""
-        session_id = self._cookie_manager.get_cookie(
-            request=request,
-            key=self._cookie_manager.GUEST_COOKIE
-        )
-        return UUID(session_id) if session_id else None
-
-    def delete_guest_session(self, response: HttpResponse) -> None:
-        """Deletes the guest session."""
-        self._cookie_manager.delete_cookie(
-            response=response,
-            key=self._cookie_manager.GUEST_COOKIE
-        )
-        self._cookie_manager.delete_cookie(
-            response=response,
-            key=self._cookie_manager.DATA_COOKIE
-        )
-
-    def update_guest_data(
-        self,
-        request: HttpRequest,
-        response: HttpResponse,
-        new_data: dict[str, Any]
+    def update(
+        self, 
+        request: HttpRequest, 
+        data: SessionData, 
+        response: HttpResponse
     ) -> None:
-        """Updates guest data while preserving existing information."""
-        raw_data = self._cookie_manager.get_cookie(
-            request=request,
-            key=self._cookie_manager.DATA_COOKIE
-        )
-        # raw_data: str | None → json.loads принимает str
+        if session_id := request.COOKIES.get("auth_session"):
+            self._redis.set(session_id, json.dumps(asdict(data)), ex=3600)
+
+    def delete(self, request: HttpRequest, response: HttpResponse) -> None:
+        if session_id := request.COOKIES.get("auth_session"):
+            self._redis.delete(session_id)
+        response.delete_cookie("auth_session")
+
+
+class GuestSessionBackend(IGuestSessionBackend):
+    """Управление гостевыми сессиями через куки."""
+
+    COOKIE_NAME = "guest_session"
+    DATA_COOKIE = "guest_data"
+
+    def create(self, id: UUID, data: dict[str, Any], response: HttpResponse) -> UUID:
+        response.set_cookie(self.COOKIE_NAME, str(id), httponly=True)
+        response.set_cookie(self.DATA_COOKIE, json.dumps(data), httponly=True)
+        return id
+
+    def read(self, request: HttpRequest) -> Optional[dict[str, Any]]:
+        raw_data = request.COOKIES.get(self.DATA_COOKIE)
+        return json.loads(raw_data) if raw_data else None
+
+    def update(
+        self, 
+        request: HttpRequest, 
+        data: dict[str, Any], 
+        response: HttpResponse
+    ) -> None:
+        raw_data = request.COOKIES.get(self.DATA_COOKIE)
         current_data: dict[str, Any] = json.loads(raw_data) if raw_data else {}
-        current_data.update(new_data)
-        self._cookie_manager.set_cookie(
-            response=response,
-            key=self._cookie_manager.DATA_COOKIE,
-            value=json.dumps(current_data)
-        )
+        current_data |= data
+        response.set_cookie(self.DATA_COOKIE, json.dumps(current_data), httponly=True)
+
+    def delete(self, request: HttpRequest, response: HttpResponse) -> None:
+        if request.COOKIES.get(self.COOKIE_NAME):
+            response.delete_cookie(self.COOKIE_NAME)
+        if request.COOKIES.get(self.DATA_COOKIE):
+            response.delete_cookie(self.DATA_COOKIE)

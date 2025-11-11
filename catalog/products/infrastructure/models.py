@@ -1,5 +1,6 @@
 import datetime
 
+from main.infrastructure.db import Base
 from sqlalchemy import (
     Boolean,
     Column,
@@ -10,11 +11,7 @@ from sqlalchemy import (
     String,
     Table,
 )
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-
-
-class Base(DeclarativeBase):
-    pass
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
 # --- Основная сущность ---
@@ -23,7 +20,7 @@ class ProductModel(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
-    description: Mapped[str] = mapped_column(String, nullable=True)
+    description: Mapped[str | None] = mapped_column(String, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     brand_id: Mapped[int] = mapped_column(ForeignKey("brands.id"))
@@ -99,7 +96,7 @@ class Price(Base):
     price: Mapped[float] = mapped_column(Float, nullable=False)
     currency: Mapped[str] = mapped_column(String, default="USD")
     valid_from: Mapped[datetime.datetime] = mapped_column(
-        DateTime, default=datetime.timezone.utc
+        DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc)
     )
     valid_to: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=True)
 
@@ -128,7 +125,7 @@ class Review(Base):
     rating: Mapped[int] = mapped_column(Integer, nullable=False)
     comment: Mapped[str] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime, default=datetime.timezone.utc
+        DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc)
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
@@ -138,11 +135,9 @@ class Review(Base):
 # --- Теги ---
 class Tag(Base):
     __tablename__ = "tags"
-
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-
     products = relationship("Product", secondary="product_tags", back_populates="tags")
 
 

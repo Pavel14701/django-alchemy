@@ -1,4 +1,4 @@
-from typing import List, Protocol
+from typing import List, Optional, Protocol
 
 from products.application.types import SortFields
 
@@ -12,6 +12,20 @@ class IProductRepository(Protocol):
         limit: int = 20,
         sort_by: SortFields | None = None,
         descending: bool = False,
-    ) -> List[Product]: ...
+    ) -> List[Product]: 
+        raise NotImplementedError()
 
-    def count(self) -> int: ...
+    def count(self) -> int:
+        raise NotImplementedError()
+
+    def get_by_id(self, product_id: int) -> Optional[Product]:
+        raise NotImplementedError()
+
+    def add(self, product: Product) -> Product:
+        raise NotImplementedError()
+
+    def update(self, product: Product) -> Product:
+        raise NotImplementedError()
+
+    def delete(self, product_id: int) -> None:
+        raise NotImplementedError()

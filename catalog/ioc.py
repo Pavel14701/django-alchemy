@@ -4,7 +4,6 @@ from uuid import UUID
 import main.application.interfaces as interfaces
 from config import Config
 from dishka import AnyOf, Provider, Scope, from_context, provide
-from main.infrastructure.cookies import CookieRepo
 from main.infrastructure.db import new_session_maker
 from main.infrastructure.middleware import (
     GuestSessionBackend,
@@ -64,19 +63,12 @@ class CatalogProvider(Provider):
         scope=Scope.REQUEST,
     )
 
-    session_backend = provide(
-        RedisSessionBackend, 
-        scope=Scope.REQUEST, 
-        provides=interfaces.ISessionBackend
-    )
-    guest_session_backend = provide(
-        GuestSessionBackend, 
-        scope=Scope.REQUEST, 
-        provides=interfaces.IGuestSessionBackend
+    redis_session_backend = provide(
+        source=interfaces.IRedisSessionBackend,
+        provides=RedisSessionBackend
     )
 
-    cookie_repo = provide(
-        CookieRepo, 
-        scope=Scope.REQUEST, 
-        provides=interfaces.ICookieBackend
+    guest_session_backend = provide(
+        source=interfaces.IGuestSessionBackend,
+        provides=GuestSessionBackend
     )

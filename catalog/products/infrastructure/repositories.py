@@ -3,7 +3,7 @@ from typing import List, Optional
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
-from products.infrastructure.models import Price, ProductModel
+from products.infrastructure.models import Brand, Category, Media, Price, ProductModel
 
 from ..application.interfaces import IProductRepository, SortFields
 from ..domain.entities import Product
@@ -13,6 +13,35 @@ class ProductRepository(IProductRepository):
     def __init__(self, session: Session) -> None:
         self.session = session
 
+    # --- CREATE ---
+    def add(self, product: Product) -> Product:
+        model = ProductModel(
+            name=product.name,
+            description=product.description,
+            is_active=True,
+        )
+        self.session.add(model)
+        self.session.commit()
+
+        if product.price is not None:
+            self._add_price(model.id, product.price, product.currency)
+
+        if product.brand:
+            self._ensure_brand(product, model)
+
+        if product.categories:
+            self._ensure_categories(product, model)
+
+        if product.media_urls:
+            self._ensure_media(product, model)
+
+        return self._to_entity(model)
+
+    # --- READ ---
+    def get_by_id(self, product_id: int) -> Optional[Product]:
+        row = self.session.query(ProductModel).filter_by(id=product_id).first()
+        return self._to_entity(row) if row else None
+
     def get_all(
         self,
         offset: int = 0,
@@ -21,47 +50,82 @@ class ProductRepository(IProductRepository):
         descending: bool = False,
     ) -> List[Product]:
         query = self.session.query(ProductModel)
-
         if sort_by is not None:
             column = getattr(ProductModel, sort_by)
             if descending:
                 column = column.desc()
             query = query.order_by(column)
-
         rows = query.offset(offset).limit(limit).all()
         return [self._to_entity(r) for r in rows]
 
     def count(self) -> int:
         return self.session.query(ProductModel).count()
 
-    def get_by_id(self, product_id: int) -> Optional[Product]:
-        row = self.session.query(ProductModel).filter_by(id=product_id).first()
-        return self._to_entity(row) if row else None
+    # --- UPDATE ---
+    def update(self, product: Product) -> Product:
+        model = self.session.query(ProductModel).filter_by(id=product.id).first()
+        if not model:
+            raise ValueError("Продукт не найден")
 
-    def add(self, product: Product) -> Product:
-        """Добавление нового продукта в БД."""
-        model = ProductModel(
-            name=product.name,
-            description=getattr(product, "description", None),
-            is_active=True,
-        )
-        self.session.add(model)
+        model.name = product.name
+        model.description = product.description
+
+        if product.price is not None:
+            self._add_price(model.id, product.price, product.currency)
+
+        if product.brand:
+            self._ensure_brand(product, model)
+
+        if product.categories is not None:
+            model.categories.clear()
+            self._ensure_categories(product, model)
+
+        if product.media_urls is not None:
+            model.media.clear()
+            self._ensure_media(product, model)
+
         self.session.commit()
-
-        # если у продукта есть цена — добавляем запись в Price
-        if getattr(product, "price", None) is not None:
-            price = Price(
-                product_id=model.id,
-                price=product.price,
-                currency="USD",
-            )
-            self.session.add(price)
-            self.session.commit()
-
         return self._to_entity(model)
 
+    # --- DELETE ---
+    def delete(self, product_id: int) -> None:
+        model = self.session.query(ProductModel).filter_by(id=product_id).first()
+        if not model:
+            raise ValueError("Продукт не найден")
+        self.session.delete(model)
+        self.session.commit()
+
+    # --- Вспомогательные методы ---
+    def _add_price(self, product_id: int, price_value: float, currency: str) -> None:
+        price = Price(product_id=product_id, price=price_value, currency=currency)
+        self.session.add(price)
+        self.session.commit()
+
+    def _ensure_brand(self, product: Product, model: ProductModel) -> None:
+        brand = self.session.query(Brand).filter_by(name=product.brand).first()
+        if not brand:
+            brand = Brand(name=product.brand)
+            self.session.add(brand)
+            self.session.commit()
+        model.brand = brand
+
+    def _ensure_categories(self, product: Product, model: ProductModel) -> None:
+        for cat_name in product.categories or []:
+            category = self.session.query(Category).filter_by(name=cat_name).first()
+            if not category:
+                category = Category(name=cat_name)
+                self.session.add(category)
+                self.session.commit()
+            model.categories.append(category)
+
+    def _ensure_media(self, product: Product, model: ProductModel) -> None:
+        for url in product.media_urls or []:
+            media = Media(product_id=model.id, type="image", url=url)
+            self.session.add(media)
+        self.session.commit()
+
+    # --- Преобразование ORM -> доменная сущность ---
     def _to_entity(self, model: ProductModel) -> Product:
-        """Преобразование ORM‑модели в доменную сущность."""
         if model is None:
             return None
 
@@ -76,4 +140,10 @@ class ProductRepository(IProductRepository):
             id=model.id,
             name=model.name,
             price=latest_price.price if latest_price else None,
+            description=model.description,
+            brand=model.brand.name if model.brand else None,
+            categories=[c.name for c in model.categories] if model.categories else [],
+            in_stock=model.inventory[0].quantity if model.inventory else None,
+            media_urls=[m.url for m in model.media] if model.media else [],
+            currency=latest_price.currency if latest_price else "USD",
         )
