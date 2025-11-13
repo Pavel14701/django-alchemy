@@ -40,7 +40,7 @@ class ProductRepository(IProductRepository):
     # --- READ ---
     def get_by_id(self, product_id: int) -> Optional[Product]:
         row = self.session.query(ProductModel).filter_by(id=product_id).first()
-        return self._to_entity(row) if row else None
+        return None if row is None else self._to_entity(row)
 
     def get_all(
         self,
@@ -64,7 +64,7 @@ class ProductRepository(IProductRepository):
     # --- UPDATE ---
     def update(self, product: Product) -> Product:
         model = self.session.query(ProductModel).filter_by(id=product.id).first()
-        if not model:
+        if model is None:
             raise ValueError("Продукт не найден")
 
         model.name = product.name
@@ -90,13 +90,19 @@ class ProductRepository(IProductRepository):
     # --- DELETE ---
     def delete(self, product_id: int) -> None:
         model = self.session.query(ProductModel).filter_by(id=product_id).first()
-        if not model:
+        if model is None:
             raise ValueError("Продукт не найден")
         self.session.delete(model)
         self.session.commit()
 
     # --- Вспомогательные методы ---
-    def _add_price(self, product_id: int, price_value: float, currency: str) -> None:
+    def _add_price(
+        self, 
+        product_id: int, 
+        price_value: float, 
+        currency: Optional[str]
+    ) -> None:
+        currency = currency or "USD"
         price = Price(product_id=product_id, price=price_value, currency=currency)
         self.session.add(price)
         self.session.commit()
@@ -126,9 +132,6 @@ class ProductRepository(IProductRepository):
 
     # --- Преобразование ORM -> доменная сущность ---
     def _to_entity(self, model: ProductModel) -> Product:
-        if model is None:
-            return None
-
         latest_price = (
             self.session.query(Price)
             .filter(Price.product_id == model.id)

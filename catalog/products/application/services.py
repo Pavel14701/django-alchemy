@@ -40,28 +40,23 @@ class ProductService:
             descending=descending,
         )
         total = self.repo.count()
-        return [
-            ProductDTO(id=p.id, name=p.name, price=p.price)
-            for p in products
-        ], total
+        return [ProductDTO.from_entity(p) for p in products], total
 
-    # --- Логика цен ---
-    def set_price(self, product: Product, new_price: float) -> Product:
+    def set_price(self, product: Product, new_price: float) -> Optional[Product]:
         if new_price <= 0:
-            raise ValueError("Цена должна быть положительной")
+            return None
         product.price = round(new_price, 2)
         return self.repo.update(product)
 
-    def apply_discount(self, product: Product, percent: float) -> Product:
-        if percent < 0 or percent > 100:
-            raise ValueError("Процент скидки должен быть от 0 до 100")
-        if product.price is not None:
-            product.price = round(product.price * (1 - percent / 100), 2)
+    def apply_discount(self, product: Product, percent: float) -> Optional[Product]:
+        if product.price is None:
+            return None
+        product.price = round(product.price * (1 - percent / 100), 2)
         return self.repo.update(product)
 
-    def apply_tax(self, product: Product, percent: float) -> Product:
+    def apply_tax(self, product: Product, percent: float) -> Optional[Product]:
         if product.price is None:
-            raise ValueError("Цена не установлена")
+            return None
         product.price = round(product.price * (1 + percent / 100), 2)
         return self.repo.update(product)
 
@@ -70,20 +65,16 @@ class ProductService:
         return (product.in_stock or 0) > 0
 
     def restock(self, product: Product, amount: int) -> Product:
-        if amount <= 0:
-            raise ValueError("Количество должно быть положительным")
         product.in_stock = (product.in_stock or 0) + amount
         return self.repo.update(product)
 
     def sell(self, product: Product, amount: int = 1) -> Product:
-        if (product.in_stock or 0) < amount:
-            raise ValueError("Недостаточно товара на складе")
         product.in_stock = (product.in_stock or 0) - amount
         return self.repo.update(product)
 
     def reserve(self, product: Product, amount: int) -> bool:
         current_stock = product.in_stock or 0
-        if amount > 0 and current_stock >= amount:
+        if current_stock >= amount:
             product.in_stock = current_stock - amount
             self.repo.update(product)
             return True
@@ -135,8 +126,6 @@ class ProductService:
 
     # --- Бренд ---
     def change_brand(self, product: Product, new_brand: str) -> Product:
-        if not new_brand:
-            raise ValueError("Бренд не может быть пустым")
         product.brand = new_brand
         return self.repo.update(product)
 

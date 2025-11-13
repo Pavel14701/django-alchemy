@@ -71,17 +71,17 @@ class SetPriceInteractor:
     def __init__(self, service: ProductService) -> None:
         self.service = service
 
-    def execute(self, product: Product, new_price: float) -> ProductDTO:
+    def execute(self, product: Product, new_price: float) -> Optional[ProductDTO]:
         updated = self.service.set_price(product, new_price)
-        return ProductDTO.from_entity(updated)
+        return None if updated is None else ProductDTO.from_entity(updated)
 
 
 class ApplyDiscountInteractor:
     def __init__(self, service: ProductService) -> None:
         self.service = service
 
-    def execute(self, product_dto: ProductDTO, percent: float) -> ProductDTO:
-        from products.domain.entities import Product
+    def execute(self, product_dto: ProductDTO, percent: float) -> Optional[ProductDTO]:
+        # маппинг DTO → сущность
         product = Product(
             id=product_dto.id,
             name=product_dto.name,
@@ -91,18 +91,19 @@ class ApplyDiscountInteractor:
             categories=product_dto.categories,
             in_stock=product_dto.in_stock,
             media_urls=product_dto.media_urls,
+            currency=product_dto.currency,
         )
         updated = self.service.apply_discount(product, percent)
-        return ProductDTO.from_entity(updated)
+        return None if updated is None else ProductDTO.from_entity(updated)
 
 
 class ApplyTaxInteractor:
     def __init__(self, service: ProductService) -> None:
         self.service = service
 
-    def execute(self, product: Product, percent: float) -> ProductDTO:
+    def execute(self, product: Product, percent: float) -> Optional[ProductDTO]:
         updated = self.service.apply_tax(product, percent)
-        return ProductDTO.from_entity(updated)
+        return None if updated is None else ProductDTO.from_entity(updated)
 
 
 # --- Логика склада ---

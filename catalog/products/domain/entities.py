@@ -12,4 +12,4 @@ class Product:
     categories: List[str] | None = None
     in_stock: Optional[int] = None
     media_urls: List[str] | None = None
-    currency: str = "USD"
+    currency: Optional[str] = "USD"

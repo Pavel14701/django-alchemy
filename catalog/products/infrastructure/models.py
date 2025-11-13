@@ -93,8 +93,8 @@ class Price(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"))
-    price: Mapped[float] = mapped_column(Float, nullable=False)
-    currency: Mapped[str] = mapped_column(String, default="USD")
+    price: Mapped[float] = mapped_column(Float, nullable=True)
+    currency: Mapped[str] = mapped_column(String, default="USD", nullable=True)
     valid_from: Mapped[datetime.datetime] = mapped_column(
         DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc)
     )

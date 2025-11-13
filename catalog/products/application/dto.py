@@ -1,4 +1,4 @@
-from typing import List
+from typing import Iterable, List
 
 import msgspec
 
@@ -14,6 +14,7 @@ class ProductDTO(msgspec.Struct):
     categories: List[str] | None = None
     in_stock: int | None = None
     media_urls: List[str] | None = None
+    currency: str | None = None
 
     @classmethod
     def from_entity(cls, product: Product) -> "ProductDTO":
@@ -32,8 +33,5 @@ class ProductDTO(msgspec.Struct):
         )
 
     @classmethod
-    def from_list(cls, products: list[Product]) -> list["ProductDTO"]:
-        """
-        Маппинг списка доменных сущностей в список DTO.
-        """
+    def from_iterable(cls, products: Iterable[Product]) -> list["ProductDTO"]:
         return [cls.from_entity(p) for p in products]
