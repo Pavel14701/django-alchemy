@@ -5,11 +5,11 @@ import main.application.interfaces as interfaces
 from config import Config
 from dishka import AnyOf, Provider, Scope, from_context, provide
 from main.infrastructure.db import new_session_maker
-from main.infrastructure.middleware import (
+from main.infrastructure.redis import new_redis_client
+from main.infrastructure.sessions import (
     GuestSessionBackend,
     RedisSessionBackend,
 )
-from main.infrastructure.redis import new_redis_client
 from products.application.interactors import ListProductsInteractor
 from products.application.services import ProductService
 from products.infrastructure.repositories import (
@@ -35,13 +35,9 @@ class CatalogProvider(Provider):
         with session_maker() as session:
             yield session
 
-    @provide(scope=Scope.REQUEST)
-    def get_redis_conn(self, config: Config) -> Iterable[Redis]:
-        conn = new_redis_client(config.redis)
-        try:
-            yield conn
-        finally:
-            conn.close()
+    @provide(scope=Scope.APP)
+    def get_redis_conn(self, config: Config) -> Redis:
+        return new_redis_client(config.redis)
 
     @provide(scope=Scope.APP)
     def get_uuid_generator(self) -> interfaces.UUIDGenerator:
@@ -64,11 +60,13 @@ class CatalogProvider(Provider):
     )
 
     redis_session_backend = provide(
-        source=interfaces.IRedisSessionBackend,
-        provides=RedisSessionBackend
+        source=RedisSessionBackend,
+        provides=interfaces.IRedisSessionBackend,
+        scope=Scope.APP
     )
 
     guest_session_backend = provide(
-        source=interfaces.IGuestSessionBackend,
-        provides=GuestSessionBackend
+        source=GuestSessionBackend,
+        provides=interfaces.IGuestSessionBackend,
+        scope=Scope.APP
     )
