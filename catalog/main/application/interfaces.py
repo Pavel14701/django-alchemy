@@ -3,7 +3,7 @@ from uuid import UUID
 
 from django.http import HttpRequest, HttpResponse
 
-from catalog.main.domain.entities import SessionData
+from main.domain.entities import SessionData
 
 UUIDGenerator = Callable[[], UUID]
 

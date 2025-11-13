@@ -31,6 +31,7 @@ class RedisConfig(msgspec.Struct):
     port: int
     db: int
     password: str
+    max_conn: int
 
 
 class Config(msgspec.Struct):
@@ -44,7 +45,7 @@ class Config(msgspec.Struct):
         base_dir = Path(__file__).resolve().parent
 
         def _split_hosts(value: str) -> list[str]:
-            return [] if not value else value.split(",")
+            return value.split(",") if value else []
 
         return cls(
             secret=SecretConfig(
@@ -71,5 +72,6 @@ class Config(msgspec.Struct):
                 port=int(os.getenv("REDIS_PORT", "6379")),
                 db=int(os.getenv("REDIS_SESSIONS_DB", "0")),
                 password=os.getenv("REDIS_PASSWORD", ""),
+                max_conn=int(os.getenv("REDIS_MAX_CONNECTIONS", 50))
             ),
         )

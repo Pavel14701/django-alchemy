@@ -1,26 +1,38 @@
 import contextlib
+from typing import Any
 from uuid import UUID
 
 from django.http import HttpRequest, HttpResponse
 
+from main.application.interfaces import (
+    IGuestSessionBackend,
+    IRedisSessionBackend,
+)
 from main.domain.entities import SessionData
-from main.infrastructure.sessions import GuestSessionBackend, RedisSessionBackend
 
 
-class SessionMiddleware:
+class MiddlewareMeta(type):
+    def __call__(cls, get_response, *args, **kwargs) -> Any:
+        instance = super().__call__(get_response)
+        from container import container
+        instance.redis_backend = container.get(IRedisSessionBackend)
+        instance.guest_manager = container.get(IGuestSessionBackend)
+        return instance
+
+
+class SessionMiddleware(metaclass=MiddlewareMeta):
     """
     Django middleware для управления аутентифицированными и гостевыми сессиями.
     """
 
+    redis_backend: IRedisSessionBackend
+    guest_manager: IGuestSessionBackend
+
     def __init__(
         self,
         get_response,
-        redis_manager: RedisSessionBackend,
-        guest_manager: GuestSessionBackend,
-    ):
+    ) -> None:
         self.get_response = get_response
-        self.redis_backend = redis_manager
-        self.guest_manager = guest_manager
 
     def __call__(self, request: HttpRequest) -> HttpResponse:
         """
