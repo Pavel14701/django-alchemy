@@ -1,16 +1,24 @@
-from typing import Iterable
+from typing import Iterable, cast
+from uuid import UUID
 
-import interfaces
+import main.application.interfaces as interfaces
 from config import Config
-from db import new_session_maker
 from dishka import AnyOf, Provider, Scope, from_context, provide
+from main.infrastructure.db import new_session_maker
+from main.infrastructure.middleware import (
+    GuestSessionBackend,
+    RedisSessionBackend,
+)
+from main.infrastructure.redis import new_redis_client
 from products.application.interactors import ListProductsInteractor
 from products.application.services import ProductService
 from products.infrastructure.repositories import (
     IProductRepository,
     ProductRepository,
 )
+from redis import Redis
 from sqlalchemy.orm import Session, sessionmaker
+from uuid_extensions import uuid7
 
 
 class CatalogProvider(Provider):
@@ -27,6 +35,18 @@ class CatalogProvider(Provider):
         with session_maker() as session:
             yield session
 
+    @provide(scope=Scope.REQUEST)
+    def get_redis_conn(self, config: Config) -> Iterable[Redis]:
+        conn = new_redis_client(config.redis)
+        try:
+            yield conn
+        finally:
+            conn.close()
+
+    @provide(scope=Scope.APP)
+    def get_uuid_generator(self) -> interfaces.UUIDGenerator:
+        return lambda: cast(UUID, uuid7())
+
     product_repository = provide(
         source=ProductRepository,
         scope=Scope.REQUEST,
@@ -41,4 +61,14 @@ class CatalogProvider(Provider):
     list_products_interactor = provide(
         source=ListProductsInteractor,
         scope=Scope.REQUEST,
+    )
+
+    redis_session_backend = provide(
+        source=interfaces.IRedisSessionBackend,
+        provides=RedisSessionBackend
+    )
+
+    guest_session_backend = provide(
+        source=interfaces.IGuestSessionBackend,
+        provides=GuestSessionBackend
     )

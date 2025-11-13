@@ -1,14 +1,15 @@
 from dataclasses import dataclass
+from typing import List, Optional
 
 
 @dataclass
 class Product:
     id: int
     name: str
-    price: float
-
-    def apply_discount(self, percent: float) -> None:
-        """Пример доменной логики: применить скидку."""
-        if percent < 0 or percent > 100:
-            raise ValueError("Процент скидки должен быть от 0 до 100")
-        self.price = self.price * (1 - percent / 100)
+    price: Optional[float] = None
+    description: Optional[str] = None
+    brand: Optional[str] = None
+    categories: List[str] | None = None
+    in_stock: Optional[int] = None
+    media_urls: List[str] | None = None
+    currency: Optional[str] = "USD"
