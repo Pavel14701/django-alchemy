@@ -50,7 +50,7 @@ class Category(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     products = relationship(
-        "Product", secondary="product_categories", back_populates="categories"
+        "ProductModel", secondary="product_categories", back_populates="categories"
     )
 
 
@@ -71,7 +71,7 @@ class Brand(Base):
     country: Mapped[str] = mapped_column(String, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    products = relationship("Product", back_populates="brand")
+    products = relationship("ProductModel", back_populates="brand")
 
 
 # --- Атрибуты ---
@@ -84,7 +84,7 @@ class ProductAttribute(Base):
     value: Mapped[str] = mapped_column(String, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    product = relationship("Product", back_populates="attributes")
+    product = relationship("ProductModel", back_populates="attributes")
 
 
 # --- Цена и скидки ---
@@ -100,7 +100,7 @@ class Price(Base):
     )
     valid_to: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=True)
 
-    product = relationship("Product", back_populates="prices")
+    product = relationship("ProductModel", back_populates="prices")
 
 
 # --- Склад ---
@@ -112,7 +112,7 @@ class Inventory(Base):
     quantity: Mapped[int] = mapped_column(Integer, default=0)
     warehouse_id: Mapped[int] = mapped_column(Integer, nullable=True)
 
-    product = relationship("Product", back_populates="inventory")
+    product = relationship("ProductModel", back_populates="inventory")
 
 
 # --- Отзывы ---
@@ -129,7 +129,7 @@ class Review(Base):
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    product = relationship("Product", back_populates="reviews")
+    product = relationship("ProductModel", back_populates="reviews")
 
 
 # --- Теги ---
@@ -138,7 +138,9 @@ class Tag(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    products = relationship("Product", secondary="product_tags", back_populates="tags")
+    products = relationship(
+        "ProductModel", secondary="product_tags", back_populates="tags"
+    )
 
 
 product_tags = Table(
@@ -159,7 +161,7 @@ class Variant(Base):
     size: Mapped[str] = mapped_column(String, nullable=True)
     color: Mapped[str] = mapped_column(String, nullable=True)
 
-    product = relationship("Product", back_populates="variants")
+    product = relationship("ProductModel", back_populates="variants")
 
 
 # --- Абстрактное медиа ---
@@ -175,4 +177,4 @@ class Media(Base):
         DateTime, default=datetime.timezone.utc
     )
 
-    product = relationship("Product", back_populates="media")
+    product = relationship("ProductModel", back_populates="media")

@@ -9,7 +9,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 config: Config = container.get(Config)
 
 SECRET_KEY = config.secret.config_secret_key
-DEBUG = True
+DEBUG = False
 DEBUG_PROPAGATE_EXCEPTIONS = True
 ALLOWED_HOSTS = config.secret.allowed_hosts
 
