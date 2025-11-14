@@ -17,7 +17,7 @@ class RedisSessionBackend(IRedisSessionBackend):
     """Управление авторизованными сессиями в Redis (синхронная версия)."""
 
     def __init__(self, redis: Redis) -> None:
-        self._redis = redis
+        self._redis: Redis = redis
 
     def create(self, id: UUID, data: SessionData, response: HttpResponse) -> UUID:
         """Создать новую сессию в Redis и записать идентификатор в куки."""
@@ -54,19 +54,29 @@ class RedisSessionBackend(IRedisSessionBackend):
 
 
 class GuestSessionBackend(IGuestSessionBackend):
-    """Управление гостевыми сессиями через куки."""
+    """Управление гостевыми сессиями в Redis."""
 
     COOKIE_NAME = "guest_session"
-    DATA_COOKIE = "guest_data"
+
+    def __init__(self, redis: Redis) -> None:
+        self._redis = redis
 
     def create(self, id: UUID, data: dict[str, Any], response: HttpResponse) -> UUID:
-        response.set_cookie(self.COOKIE_NAME, str(id), httponly=True)
-        response.set_cookie(self.DATA_COOKIE, json.dumps(data), httponly=True)
+        """Создать гостевую сессию в Redis и записать идентификатор в куки."""
+        self._redis.set(
+            name=id.hex,
+            value=json.dumps(data),
+            ex=1800
+        )
+        response.set_cookie(self.COOKIE_NAME, id.hex, httponly=True)
         return id
 
     def read(self, request: HttpRequest) -> Optional[dict[str, Any]]:
-        raw_data = request.COOKIES.get(self.DATA_COOKIE)
-        return json.loads(raw_data) if raw_data else None
+        session_id = request.COOKIES.get(self.COOKIE_NAME)
+        if not session_id:
+            return None
+        raw_data = cast(Optional[bytes], self._redis.get(session_id))
+        return None if raw_data is None else json.loads(raw_data.decode("utf-8"))
 
     def update(
         self, 
@@ -74,13 +84,15 @@ class GuestSessionBackend(IGuestSessionBackend):
         data: dict[str, Any], 
         response: HttpResponse
     ) -> None:
-        raw_data = request.COOKIES.get(self.DATA_COOKIE)
-        current_data: dict[str, Any] = json.loads(raw_data) if raw_data else {}
-        current_data |= data
-        response.set_cookie(self.DATA_COOKIE, json.dumps(current_data), httponly=True)
+        if session_id := request.COOKIES.get(self.COOKIE_NAME):
+            raw_data = cast(Optional[bytes], self._redis.get(session_id))
+            current_data: dict[str, Any] = json.loads(
+                raw_data.decode("utf-8")
+            ) if raw_data else {}
+            current_data |= data
+            self._redis.set(session_id, json.dumps(current_data), ex=1800)
 
     def delete(self, request: HttpRequest, response: HttpResponse) -> None:
-        if request.COOKIES.get(self.COOKIE_NAME):
-            response.delete_cookie(self.COOKIE_NAME)
-        if request.COOKIES.get(self.DATA_COOKIE):
-            response.delete_cookie(self.DATA_COOKIE)
+        if session_id := request.COOKIES.get(self.COOKIE_NAME):
+            self._redis.delete(session_id)
+        response.delete_cookie(self.COOKIE_NAME)

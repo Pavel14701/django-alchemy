@@ -35,69 +35,50 @@ class SessionMiddleware(metaclass=MiddlewareMeta):
         self.get_response = get_response
 
     def __call__(self, request: HttpRequest) -> HttpResponse:
-        self._ensure_session_dict(request)
-        session_id = self._extract_session_id(request)
-        session_data = self._load_session_data(request, session_id)
+        sid, data = self._load_or_init_session(request)
         response: HttpResponse = self.get_response(request)
-        if "session_data" not in request.session:
-            self._create_guest_session(request, response, session_id)
-        if session_data:
-            self._cleanup_guest_session(request, response)
+        self._sync_guest_session(request, response, sid, data)
         return response
 
-    def _ensure_session_dict(self, request: HttpRequest) -> None:
+    def _load_or_init_session(
+        self, 
+        request: HttpRequest
+    ) -> tuple[str | None, SessionData | None]:
         if not hasattr(request, "session"):
             request.session = cast(Any, {})
 
-    def _extract_session_id(self, request: HttpRequest) -> str | None:
-        return request.COOKIES.get(
+        sid = request.COOKIES.get(
             "auth_session"
         ) or request.COOKIES.get(
             "guest_session"
         )
+        data: SessionData | None = None
 
-    def _load_session_data(
-        self, 
-        request: HttpRequest, 
-        session_id: str | None
-    ) -> SessionData | None:
-        if not session_id:
-            return None
-        with contextlib.suppress(ValueError):
-            session_uuid = UUID(session_id)
-            session_data = self.redis_backend.read(request)
-            request.session["session_data"] = session_data or str(session_uuid)
-            return session_data
-        return None
+        if sid:
+            with contextlib.suppress(ValueError):
+                uuid_ = UUID(sid)
+                data = self.redis_backend.read(request)
+                request.session["session_data"] = data or str(uuid_)
 
-    def _create_guest_session(
-        self, 
-        request: HttpRequest, 
-        response: HttpResponse, 
-        session_id: str | None
+        return sid, data
+
+    def _sync_guest_session(
+        self,
+        request: HttpRequest,
+        response: HttpResponse,
+        sid: str | None,
+        data: SessionData | None
     ) -> None:
-        if session_id:
-            try:
-                guest_session_id = UUID(session_id)
-            except ValueError:
-                guest_session_id = self.uuid_generator()
-        else:
-            guest_session_id = self.uuid_generator()
-        guest_session = self.guest_manager.create(
-            id=guest_session_id,
-            data={},
-            response=response,
-        )
-        request.session["session_data"] = str(guest_session)
-        response.set_cookie(
-            key="guest_session",
-            value=str(guest_session),
-            httponly=True,
-        )
+        if "session_data" not in request.session:
+            guest_id = self.uuid_generator()
+            with contextlib.suppress(ValueError, TypeError):
+                guest_id = UUID(sid) if sid else guest_id
 
-    def _cleanup_guest_session(
-        self, 
-        request: HttpRequest, 
-        response: HttpResponse
-    ) -> None:
-        self.guest_manager.delete(request, response)
+            guest = self.guest_manager.create(id=guest_id, data={}, response=response)
+            request.session["session_data"] = str(guest)
+            response.set_cookie("guest_session", str(guest), httponly=True)
+
+        elif data and "auth_session" in request.COOKIES:
+            # если есть авторизованная сессия → чистим гостевую
+            self.guest_manager.delete(request, response)
+            response.delete_cookie("guest_session")

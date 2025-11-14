@@ -1,4 +1,4 @@
-from django.http import JsonResponse
+from django.http import HttpRequest, JsonResponse
 from django.urls import path
 from products.controllers.views import products_view
 
@@ -6,53 +6,36 @@ urlpatterns = [
     path("products/", products_view),
 ]
 
+ERROR_CODES = {
+    400: "Bad Request",
+    401: "Unauthorized",
+    403: "Forbidden",
+    404: "Not Found",
+    405: "Method Not Allowed",
+    408: "Request Timeout",
+    429: "Too Many Requests",
+    500: "Internal Server Error",
+    502: "Bad Gateway",
+    503: "Service Unavailable",
+    504: "Gateway Timeout",
+}
 
-# --- JSON error handlers ---
-def error_400(request, exception) -> JsonResponse:
-    return JsonResponse({"status": 400, "error": "Bad Request"}, status=400)
+for code, message in ERROR_CODES.items():
+    def view(
+        request: HttpRequest,
+        exception: Exception | None = None,
+        status_code: int = code,
+        error_message: str = message,
+    ) -> JsonResponse:
+        return JsonResponse(
+            {
+                "status": status_code,
+                "error": error_message,
+            },
+            status=status_code,
+        )
+    globals()[f"error_{code}"] = view
 
-
-def error_401(request, exception=None) -> JsonResponse:
-    return JsonResponse({"status": 401, "error": "Unauthorized"}, status=401)
-
-
-def error_403(request, exception) -> JsonResponse:
-    return JsonResponse({"status": 403, "error": "Forbidden"}, status=403)
-
-
-def error_404(request, exception) -> JsonResponse:
-    return JsonResponse({"status": 404, "error": "Not Found"}, status=404)
-
-
-def error_405(request, exception=None) -> JsonResponse:
-    return JsonResponse({"status": 405, "error": "Method Not Allowed"}, status=405)
-
-
-def error_408(request, exception=None) -> JsonResponse:
-    return JsonResponse({"status": 408, "error": "Request Timeout"}, status=408)
-
-
-def error_429(request, exception=None) -> JsonResponse:
-    return JsonResponse({"status": 429, "error": "Too Many Requests"}, status=429)
-
-
-def error_500(request) -> JsonResponse:
-    return JsonResponse({"status": 500, "error": "Internal Server Error"}, status=500)
-
-
-def error_502(request, exception=None) -> JsonResponse:
-    return JsonResponse({"status": 502, "error": "Bad Gateway"}, status=502)
-
-
-def error_503(request, exception=None) -> JsonResponse:
-    return JsonResponse({"status": 503, "error": "Service Unavailable"}, status=503)
-
-
-def error_504(request, exception=None) -> JsonResponse:
-    return JsonResponse({"status": 504, "error": "Gateway Timeout"}, status=504)
-
-
-# --- Привязка к глобальным хэндлерам ---
 handler400 = "main.urls.error_400"
 handler403 = "main.urls.error_403"
 handler404 = "main.urls.error_404"
