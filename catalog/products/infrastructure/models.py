@@ -130,6 +130,8 @@ class Review(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     product = relationship("ProductModel", back_populates="reviews")
+    media = relationship("Media", back_populates="review", cascade="all, delete-orphan")
+    user = relationship("User", back_populates="reviews")
 
 
 # --- Теги ---
@@ -169,12 +171,20 @@ class Media(Base):
     __tablename__ = "media"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"))
+
+    product_id: Mapped[int | None] = mapped_column(
+        ForeignKey("products.id"), nullable=True
+    )
+    review_id: Mapped[int | None] = mapped_column(
+        ForeignKey("reviews.id"), nullable=True
+    )
+
     type: Mapped[str] = mapped_column(String, nullable=False)
     url: Mapped[str] = mapped_column(String, nullable=False)
     storage_provider: Mapped[str] = mapped_column(String, default="s3")
     created_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime, default=datetime.timezone.utc
+        DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc)
     )
 
     product = relationship("ProductModel", back_populates="media")
+    review = relationship("Review", back_populates="media")

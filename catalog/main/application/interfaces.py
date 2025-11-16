@@ -1,8 +1,6 @@
 from typing import Any, Callable, Optional, Protocol, TypeVar
 from uuid import UUID
 
-from django.http import HttpRequest, HttpResponse
-
 from main.domain.entities import SessionData
 
 UUIDGenerator = Callable[[], UUID]
@@ -11,7 +9,7 @@ SID = TypeVar("SID")
 SData = TypeVar("SData")
 
 
-class ISession(Protocol):
+class SessionProtocol(Protocol):
     """Интерфейс для управления транзакциями уровня ORM/UnitOfWork."""
 
     def commit(self) -> None:
@@ -27,32 +25,25 @@ class ISession(Protocol):
         raise NotImplementedError()
 
 
-class SessionStorage(Protocol[SID, SData]):
-    """
-    Единый протокол для работы с сессиями (CRUD + куки).
-    Реализации могут быть на Redis, в базе или через куки.
-    """
+class SessionStorageProtocol(Protocol[SID, SData]):
+    """Протокол для работы с сессиями в сторе (Redis, DB и т.д.)."""
 
-    def create(self, id: SID, data: SData, response: HttpResponse) -> SID:
-        """Создать новую сессию и вернуть её идентификатор."""
+    def create(self, id: SID, data: SData) -> SID:
         raise NotImplementedError()
 
-    def read(self, request: HttpRequest) -> Optional[SData]:
-        """Прочитать данные сессии из запроса/хранилища."""
+    def read(self, id: SID) -> Optional[SData]:
         raise NotImplementedError()
 
-    def update(self, request: HttpRequest, data: SData, response: HttpResponse) -> None:
-        """Обновить данные сессии."""
+    def update(self, id: SID, data: SData) -> None:
         raise NotImplementedError()
 
-    def delete(self, request: HttpRequest, response: HttpResponse) -> None:
-        """Удалить сессию из хранилища и очистить куки."""
+    def delete(self, id: SID) -> None:
         raise NotImplementedError()
 
 
-class IRedisSessionBackend(SessionStorage[UUID, SessionData]):
+class UserSessionBackendProtocol(SessionStorageProtocol[UUID, SessionData]):
     ...
 
 
-class IGuestSessionBackend(SessionStorage[UUID, dict[str, Any]]):
+class GuestSessionBackendProtocol(SessionStorageProtocol[UUID, dict[str, Any]]):
     ...

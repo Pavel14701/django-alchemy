@@ -3,7 +3,7 @@ from typing import List, Optional, Tuple
 from products.application.dto import ProductDTO
 from products.application.services import ProductService
 from products.application.types import SortFields
-from products.domain.entities import Product
+from products.domain.entities import ProductDM
 
 
 # --- CRUD ---
@@ -11,7 +11,7 @@ class CreateProductInteractor:
     def __init__(self, service: ProductService) -> None:
         self.service = service
 
-    def execute(self, product: Product) -> ProductDTO:
+    def execute(self, product: ProductDM) -> ProductDTO:
         created = self.service.create_product(product)
         return ProductDTO.from_entity(created)
 
@@ -29,7 +29,7 @@ class UpdateProductInteractor:
     def __init__(self, service: ProductService) -> None:
         self.service = service
 
-    def execute(self, product: Product) -> ProductDTO:
+    def execute(self, product: ProductDM) -> ProductDTO:
         updated = self.service.update_product(product)
         return ProductDTO.from_entity(updated)
 
@@ -71,7 +71,7 @@ class SetPriceInteractor:
     def __init__(self, service: ProductService) -> None:
         self.service = service
 
-    def execute(self, product: Product, new_price: float) -> Optional[ProductDTO]:
+    def execute(self, product: ProductDM, new_price: float) -> Optional[ProductDTO]:
         updated = self.service.set_price(product, new_price)
         return None if updated is None else ProductDTO.from_entity(updated)
 
@@ -82,7 +82,7 @@ class ApplyDiscountInteractor:
 
     def execute(self, product_dto: ProductDTO, percent: float) -> Optional[ProductDTO]:
         # маппинг DTO → сущность
-        product = Product(
+        product = ProductDM(
             id=product_dto.id,
             name=product_dto.name,
             price=product_dto.price,
@@ -101,7 +101,7 @@ class ApplyTaxInteractor:
     def __init__(self, service: ProductService) -> None:
         self.service = service
 
-    def execute(self, product: Product, percent: float) -> Optional[ProductDTO]:
+    def execute(self, product: ProductDM, percent: float) -> Optional[ProductDTO]:
         updated = self.service.apply_tax(product, percent)
         return None if updated is None else ProductDTO.from_entity(updated)
 
@@ -111,7 +111,7 @@ class RestockProductInteractor:
     def __init__(self, service: ProductService) -> None:
         self.service = service
 
-    def execute(self, product: Product, amount: int) -> ProductDTO:
+    def execute(self, product: ProductDM, amount: int) -> ProductDTO:
         updated = self.service.restock(product, amount)
         return ProductDTO.from_entity(updated)
 
@@ -120,7 +120,7 @@ class SellProductInteractor:
     def __init__(self, service: ProductService) -> None:
         self.service = service
 
-    def execute(self, product: Product, amount: int = 1) -> ProductDTO:
+    def execute(self, product: ProductDM, amount: int = 1) -> ProductDTO:
         updated = self.service.sell(product, amount)
         return ProductDTO.from_entity(updated)
 
@@ -129,7 +129,7 @@ class ReserveProductInteractor:
     def __init__(self, service: ProductService) -> None:
         self.service = service
 
-    def execute(self, product: Product, amount: int) -> bool:
+    def execute(self, product: ProductDM, amount: int) -> bool:
         return self.service.reserve(product, amount)
 
 
@@ -137,7 +137,7 @@ class ReleaseProductInteractor:
     def __init__(self, service: ProductService) -> None:
         self.service = service
 
-    def execute(self, product: Product, amount: int) -> ProductDTO:
+    def execute(self, product: ProductDM, amount: int) -> ProductDTO:
         updated = self.service.release(product, amount)
         return ProductDTO.from_entity(updated)
 
@@ -146,7 +146,7 @@ class StockStatusInteractor:
     def __init__(self, service: ProductService) -> None:
         self.service = service
 
-    def execute(self, product: Product) -> str:
+    def execute(self, product: ProductDM) -> str:
         return self.service.stock_status(product)
 
 
@@ -155,7 +155,7 @@ class AddCategoryInteractor:
     def __init__(self, service: ProductService) -> None:
         self.service = service
 
-    def execute(self, product: Product, category: str) -> ProductDTO:
+    def execute(self, product: ProductDM, category: str) -> ProductDTO:
         updated = self.service.add_category(product, category)
         return ProductDTO.from_entity(updated)
 
@@ -164,7 +164,7 @@ class RemoveCategoryInteractor:
     def __init__(self, service: ProductService) -> None:
         self.service = service
 
-    def execute(self, product: Product, category: str) -> ProductDTO:
+    def execute(self, product: ProductDM, category: str) -> ProductDTO:
         updated = self.service.remove_category(product, category)
         return ProductDTO.from_entity(updated)
 
@@ -173,7 +173,7 @@ class ClearCategoriesInteractor:
     def __init__(self, service: ProductService) -> None:
         self.service = service
 
-    def execute(self, product: Product) -> ProductDTO:
+    def execute(self, product: ProductDM) -> ProductDTO:
         updated = self.service.clear_categories(product)
         return ProductDTO.from_entity(updated)
 
@@ -182,7 +182,7 @@ class HasCategoryInteractor:
     def __init__(self, service: ProductService) -> None:
         self.service = service
 
-    def execute(self, product: Product, category: str) -> bool:
+    def execute(self, product: ProductDM, category: str) -> bool:
         return self.service.has_category(product, category)
 
 
@@ -191,7 +191,7 @@ class AddMediaInteractor:
     def __init__(self, service: ProductService) -> None:
         self.service = service
 
-    def execute(self, product: Product, url: str) -> ProductDTO:
+    def execute(self, product: ProductDM, url: str) -> ProductDTO:
         updated = self.service.add_media(product, url)
         return ProductDTO.from_entity(updated)
 
@@ -200,7 +200,7 @@ class ClearMediaInteractor:
     def __init__(self, service: ProductService) -> None:
         self.service = service
 
-    def execute(self, product: Product) -> ProductDTO:
+    def execute(self, product: ProductDM) -> ProductDTO:
         updated = self.service.clear_media(product)
         return ProductDTO.from_entity(updated)
 
@@ -209,7 +209,7 @@ class GetMainImageInteractor:
     def __init__(self, service: ProductService) -> None:
         self.service = service
 
-    def execute(self, product: Product) -> Optional[str]:
+    def execute(self, product: ProductDM) -> Optional[str]:
         return self.service.get_main_image(product)
 
 
@@ -218,7 +218,7 @@ class ChangeBrandInteractor:
     def __init__(self, service: ProductService) -> None:
         self.service = service
 
-    def execute(self, product: Product, new_brand: str) -> ProductDTO:
+    def execute(self, product: ProductDM, new_brand: str) -> ProductDTO:
         updated = self.service.change_brand(product, new_brand)
         return ProductDTO.from_entity(updated)
 
@@ -228,7 +228,7 @@ class ShortDescriptionInteractor:
     def __init__(self, service: ProductService) -> None:
         self.service = service
 
-    def execute(self, product: Product, max_length: int = 50) -> str:
+    def execute(self, product: ProductDM, max_length: int = 50) -> str:
         return self.service.short_description(product, max_length)
 
 
@@ -236,5 +236,5 @@ class FullInfoInteractor:
     def __init__(self, service: ProductService) -> None:
         self.service = service
 
-    def execute(self, product: Product) -> str:
+    def execute(self, product: ProductDM) -> str:
         return self.service.full_info(product)

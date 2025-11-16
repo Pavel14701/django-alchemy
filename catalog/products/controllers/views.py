@@ -1,6 +1,7 @@
 import msgspec
 from dishka import FromDishka
 from django.http import HttpResponse, JsonResponse
+from django.views.decorators.http import require_http_methods
 from main.integrations import DishkaRequest, inject
 
 from products.application.interactors import (
@@ -22,6 +23,7 @@ from products.controllers.schemas import (
 
 
 # --- LIST PRODUCTS ---
+@require_http_methods(["GET"])
 @inject
 def products_view(
     request: DishkaRequest,
@@ -52,6 +54,7 @@ def products_view(
 
 
 # --- GET PRODUCT BY ID ---
+@require_http_methods(["GET"])
 @inject
 def product_detail_view(
     request: DishkaRequest,
@@ -68,6 +71,7 @@ def product_detail_view(
 
 
 # --- CREATE PRODUCT ---
+@require_http_methods(["POST"])
 @inject
 def product_create_view(
     request: DishkaRequest,
@@ -90,6 +94,7 @@ def product_create_view(
 
 
 # --- UPDATE PRODUCT ---
+@require_http_methods(["POST"])
 @inject
 def product_update_view(
     request: DishkaRequest,
@@ -115,6 +120,7 @@ def product_update_view(
 
 
 # --- DELETE PRODUCT ---
+@require_http_methods(["POST"])
 @inject
 def product_delete_view(
     request: DishkaRequest,
@@ -126,6 +132,7 @@ def product_delete_view(
 
 
 # --- APPLY DISCOUNT ---
+@require_http_methods(["GET"])
 @inject
 def product_discount_view(
     request: DishkaRequest,
@@ -147,6 +154,7 @@ def product_discount_view(
 
 
 # --- RESTOCK PRODUCT ---
+@require_http_methods(["POST"])
 @inject
 def product_restock_view(
     request: DishkaRequest,
@@ -158,16 +166,15 @@ def product_restock_view(
         amount = data.get("amount", 0)
     except Exception:
         return JsonResponse({"error": "Invalid data"}, status=400)
-
     product = interactor.service.get_product(product_id)
     if not product:
         return JsonResponse({"error": "Product not found"}, status=404)
-
     updated = interactor.execute(product, amount)
     return HttpResponse(msgspec.json.encode(updated), content_type="application/json")
 
 
 # --- SELL PRODUCT ---
+@require_http_methods(["POST"])
 @inject
 def product_sell_view(
     request: DishkaRequest,

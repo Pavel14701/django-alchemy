@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 from adaptix import Retort
 
 from products.application.types import SORT_FIELDS, SortFields
-from products.domain.entities import Product
+from products.domain.entities import ProductDM
 
 retort = Retort()
 
@@ -98,8 +98,8 @@ class ProductCreateSchema:
 
         return obj
 
-    def to_entity(self) -> Product:
-        return Product(
+    def to_entity(self) -> ProductDM:
+        return ProductDM(
             id=0,
             name=self.name,
             price=self.price,
@@ -150,7 +150,7 @@ class ProductUpdateSchema:
 
         return obj
 
-    def apply(self, product: Product) -> Product:
+    def apply(self, product: ProductDM) -> ProductDM:
         if self.name is not None:
             product.name = self.name
         if self.price is not None:

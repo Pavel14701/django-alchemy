@@ -2,23 +2,23 @@ from typing import List, Optional, Tuple
 
 from products.application.types import SortFields
 
-from ..domain.entities import Product
+from ..domain.entities import ProductDM
 from .dto import ProductDTO
-from .interfaces import IProductRepository
+from .interfaces import ProductRepositoryProtocol
 
 
 class ProductService:
-    def __init__(self, repo: IProductRepository) -> None:
+    def __init__(self, repo: ProductRepositoryProtocol) -> None:
         self.repo = repo
 
     # --- CRUD ---
-    def create_product(self, product: Product) -> Product:
+    def create_product(self, product: ProductDM) -> ProductDM:
         return self.repo.add(product)
 
-    def get_product(self, product_id: int) -> Optional[Product]:
+    def get_product(self, product_id: int) -> Optional[ProductDM]:
         return self.repo.get_by_id(product_id)
 
-    def update_product(self, product: Product) -> Product:
+    def update_product(self, product: ProductDM) -> ProductDM:
         return self.repo.update(product)
 
     def delete_product(self, product_id: int) -> None:
@@ -42,37 +42,37 @@ class ProductService:
         total = self.repo.count()
         return [ProductDTO.from_entity(p) for p in products], total
 
-    def set_price(self, product: Product, new_price: float) -> Optional[Product]:
+    def set_price(self, product: ProductDM, new_price: float) -> Optional[ProductDM]:
         if new_price <= 0:
             return None
         product.price = round(new_price, 2)
         return self.repo.update(product)
 
-    def apply_discount(self, product: Product, percent: float) -> Optional[Product]:
+    def apply_discount(self, product: ProductDM, percent: float) -> Optional[ProductDM]:
         if product.price is None:
             return None
         product.price = round(product.price * (1 - percent / 100), 2)
         return self.repo.update(product)
 
-    def apply_tax(self, product: Product, percent: float) -> Optional[Product]:
+    def apply_tax(self, product: ProductDM, percent: float) -> Optional[ProductDM]:
         if product.price is None:
             return None
         product.price = round(product.price * (1 + percent / 100), 2)
         return self.repo.update(product)
 
     # --- Логика склада ---
-    def is_available(self, product: Product) -> bool:
+    def is_available(self, product: ProductDM) -> bool:
         return (product.in_stock or 0) > 0
 
-    def restock(self, product: Product, amount: int) -> Product:
+    def restock(self, product: ProductDM, amount: int) -> ProductDM:
         product.in_stock = (product.in_stock or 0) + amount
         return self.repo.update(product)
 
-    def sell(self, product: Product, amount: int = 1) -> Product:
+    def sell(self, product: ProductDM, amount: int = 1) -> ProductDM:
         product.in_stock = (product.in_stock or 0) - amount
         return self.repo.update(product)
 
-    def reserve(self, product: Product, amount: int) -> bool:
+    def reserve(self, product: ProductDM, amount: int) -> bool:
         current_stock = product.in_stock or 0
         if current_stock >= amount:
             product.in_stock = current_stock - amount
@@ -80,57 +80,57 @@ class ProductService:
             return True
         return False
 
-    def release(self, product: Product, amount: int) -> Product:
+    def release(self, product: ProductDM, amount: int) -> ProductDM:
         product.in_stock = (product.in_stock or 0) + amount
         return self.repo.update(product)
 
-    def stock_status(self, product: Product) -> str:
+    def stock_status(self, product: ProductDM) -> str:
         if not product.in_stock or product.in_stock == 0:
             return "нет в наличии"
         return "мало" if product.in_stock < 5 else "в наличии"
 
     # --- Категории ---
-    def add_category(self, product: Product, category: str) -> Product:
+    def add_category(self, product: ProductDM, category: str) -> ProductDM:
         if product.categories is None:
             product.categories = []
         if category not in product.categories:
             product.categories.append(category)
         return self.repo.update(product)
 
-    def remove_category(self, product: Product, category: str) -> Product:
+    def remove_category(self, product: ProductDM, category: str) -> ProductDM:
         if product.categories and category in product.categories:
             product.categories.remove(category)
         return self.repo.update(product)
 
-    def clear_categories(self, product: Product) -> Product:
+    def clear_categories(self, product: ProductDM) -> ProductDM:
         product.categories = []
         return self.repo.update(product)
 
-    def has_category(self, product: Product, category: str) -> bool:
+    def has_category(self, product: ProductDM, category: str) -> bool:
         return category in (product.categories or [])
 
     # --- Медиа ---
-    def add_media(self, product: Product, url: str) -> Product:
+    def add_media(self, product: ProductDM, url: str) -> ProductDM:
         if product.media_urls is None:
             product.media_urls = []
         if url not in product.media_urls:
             product.media_urls.append(url)
         return self.repo.update(product)
 
-    def clear_media(self, product: Product) -> Product:
+    def clear_media(self, product: ProductDM) -> ProductDM:
         product.media_urls = []
         return self.repo.update(product)
 
-    def get_main_image(self, product: Product) -> Optional[str]:
+    def get_main_image(self, product: ProductDM) -> Optional[str]:
         return product.media_urls[0] if product.media_urls else None
 
     # --- Бренд ---
-    def change_brand(self, product: Product, new_brand: str) -> Product:
+    def change_brand(self, product: ProductDM, new_brand: str) -> ProductDM:
         product.brand = new_brand
         return self.repo.update(product)
 
     # --- Удобные методы ---
-    def short_description(self, product: Product, max_length: int = 50) -> str:
+    def short_description(self, product: ProductDM, max_length: int = 50) -> str:
         if not product.description:
             return ""
         return (
@@ -139,7 +139,7 @@ class ProductService:
             else product.description
         )
 
-    def full_info(self, product: Product) -> str:
+    def full_info(self, product: ProductDM) -> str:
         return " ".join([
             f"{product.name}",
             f"({product.brand or 'без бренда'}) —",

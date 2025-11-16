@@ -2,7 +2,7 @@ from typing import Iterable, cast
 from uuid import UUID
 
 import main.application.interfaces as interfaces
-from config import Config
+from config import Config, SecretConfig
 from dishka import AnyOf, Provider, Scope, from_context, provide
 from main.infrastructure.db import new_session_maker
 from main.infrastructure.redis import new_redis_client
@@ -13,8 +13,8 @@ from main.infrastructure.sessions import (
 from products.application.interactors import ListProductsInteractor
 from products.application.services import ProductService
 from products.infrastructure.repositories import (
-    IProductRepository,
     ProductRepository,
+    ProductRepositoryProtocol,
 )
 from redis import Redis
 from sqlalchemy.orm import Session, sessionmaker
@@ -23,6 +23,10 @@ from uuid_extensions import uuid7
 
 class CatalogProvider(Provider):
     config = from_context(provides=Config, scope=Scope.APP)
+    
+    @provide(scope=Scope.APP)
+    def get_secret_config(self, config: Config) -> SecretConfig:
+        return config.secret
 
     @provide(scope=Scope.APP)
     def get_session_maker(self, config: Config) -> sessionmaker[Session]:
@@ -31,7 +35,7 @@ class CatalogProvider(Provider):
     @provide(scope=Scope.REQUEST)
     def get_session(
         self, session_maker: sessionmaker[Session],
-    ) -> Iterable[AnyOf[Session, interfaces.ISession]]:
+    ) -> Iterable[AnyOf[Session, interfaces.SessionProtocol]]:
         with session_maker() as session:
             yield session
 
@@ -46,7 +50,7 @@ class CatalogProvider(Provider):
     product_repository = provide(
         source=ProductRepository,
         scope=Scope.REQUEST,
-        provides=IProductRepository,
+        provides=ProductRepositoryProtocol,
     )
 
     product_service = provide(
@@ -61,12 +65,12 @@ class CatalogProvider(Provider):
 
     redis_session_backend = provide(
         source=RedisSessionBackend,
-        provides=interfaces.IRedisSessionBackend,
+        provides=interfaces.UserSessionBackendProtocol,
         scope=Scope.APP
     )
 
     guest_session_backend = provide(
         source=GuestSessionBackend,
-        provides=interfaces.IGuestSessionBackend,
+        provides=interfaces.GuestSessionBackendProtocol,
         scope=Scope.APP
     )

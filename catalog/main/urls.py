@@ -1,9 +1,76 @@
 from django.http import HttpRequest, JsonResponse
 from django.urls import path
-from products.controllers.views import products_view
+from products.controllers import views as products
+from users.controllers import views as views
 
 urlpatterns = [
-    path("products/", products_view),
+    path("user/register/", views.user_register_view, name="user_register"),
+    path("user/auth/", views.user_auth_view, name="user_auth"),
+    path("user/activate/", views.user_activate_view, name="user_activate"),
+    path(
+        "user/suspend/<str:target_username>/", 
+        views.user_suspend_view, 
+        name="user_suspend"
+    ),
+    path(
+        "user/unsuspend/<str:target_username>/", 
+        views.user_unsuspend_view, 
+        name="user_unsuspend"
+    ),
+    path("user/delete/", views.user_delete_view, name="user_delete"),
+    path("user/restore/", views.user_restore_view, name="user_restore"),
+    path("user/change-role/", views.user_change_role_view, name="user_change_role"),
+    path(
+        "user/change-password/", 
+        views.user_change_password_view, 
+        name="user_change_password"
+    ),
+    path(
+        "user/change-username/", 
+        views.user_change_username_view, 
+        name="user_change_username"
+    ),
+    path(
+        "user/change-email/<str:user_id>/", 
+        views.user_change_email_view, 
+        name="user_change_email"
+    ),
+    path("products/", products.products_view, name="products_list"),
+    path(
+        "products/<int:product_id>/", 
+        products.product_detail_view, 
+        name="product_detail"
+    ),
+    path(
+        "products/create/", 
+        products.product_create_view, 
+        name="product_create"
+    ),
+    path(
+        "products/<int:product_id>/update/", 
+        products.product_update_view, 
+        name="product_update"
+    ),
+    path(
+        "products/<int:product_id>/delete/", 
+        products.product_delete_view, 
+        name="product_delete"
+    ),
+    path(
+        "products/<int:product_id>/discount/", 
+        products.product_discount_view, 
+        name="product_discount"
+    ),
+    path(
+        "products/<int:product_id>/restock/", 
+        products.product_restock_view, 
+        name="product_restock"
+    ),
+    path(
+        "products/<int:product_id>/sell/", 
+        products.product_sell_view, 
+        name="product_sell"
+    ),
 ]
 
 ERROR_CODES = {
