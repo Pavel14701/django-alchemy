@@ -7,6 +7,7 @@ requires-python = ">=3.12"
 dependencies = [
     "adaptix>=3.0.0b11",
     "alembic>=1.17.1",
+    "argon2-cffi>=25.1.0",
     "dishka>=1.7.2",
     "django>=5.2.8",
     "django-stubs>=5.2.7",

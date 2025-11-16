@@ -9,13 +9,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 config: Config = container.get(Config)
 
 SECRET_KEY = config.secret.config_secret_key
-DEBUG = True
+DEBUG = False
 DEBUG_PROPAGATE_EXCEPTIONS = True
 ALLOWED_HOSTS = config.secret.allowed_hosts
 
 INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'main',
+    'products',
+    'users',
 ]
 
 MIDDLEWARE = [
@@ -23,6 +25,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'main.integrations.DishkaMiddleware',
     'main.infrastructure.middleware.SessionMiddleware',
+    'users.infrastructure.middleware.ServiceErrorMiddleware',
 ]
 
 ROOT_URLCONF = 'main.urls'
@@ -35,7 +38,6 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-# ⚡️ теперь берём из конфига
 STATIC_URL = config.static.static_url
 STATIC_ROOT = config.static.static_root
 MEDIA_URL = config.static.media_url

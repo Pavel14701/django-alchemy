@@ -5,16 +5,16 @@ from sqlalchemy.orm import Session
 
 from products.infrastructure.models import Brand, Category, Media, Price, ProductModel
 
-from ..application.interfaces import IProductRepository, SortFields
-from ..domain.entities import Product
+from ..application.interfaces import ProductRepositoryProtocol, SortFields
+from ..domain.entities import ProductDM
 
 
-class ProductRepository(IProductRepository):
+class ProductRepository(ProductRepositoryProtocol):
     def __init__(self, session: Session) -> None:
         self.session = session
 
     # --- CREATE ---
-    def add(self, product: Product) -> Product:
+    def add(self, product: ProductDM) -> ProductDM:
         model = ProductModel(
             name=product.name,
             description=product.description,
@@ -38,7 +38,7 @@ class ProductRepository(IProductRepository):
         return self._to_entity(model)
 
     # --- READ ---
-    def get_by_id(self, product_id: int) -> Optional[Product]:
+    def get_by_id(self, product_id: int) -> Optional[ProductDM]:
         row = self.session.query(ProductModel).filter_by(id=product_id).first()
         return None if row is None else self._to_entity(row)
 
@@ -48,7 +48,7 @@ class ProductRepository(IProductRepository):
         limit: int = 20,
         sort_by: Optional[SortFields] = None,
         descending: bool = False,
-    ) -> List[Product]:
+    ) -> List[ProductDM]:
         query = self.session.query(ProductModel)
         if sort_by is not None:
             column = getattr(ProductModel, sort_by)
@@ -62,7 +62,7 @@ class ProductRepository(IProductRepository):
         return self.session.query(ProductModel).count()
 
     # --- UPDATE ---
-    def update(self, product: Product) -> Product:
+    def update(self, product: ProductDM) -> ProductDM:
         model = self.session.query(ProductModel).filter_by(id=product.id).first()
         if model is None:
             raise ValueError("Продукт не найден")
@@ -107,7 +107,7 @@ class ProductRepository(IProductRepository):
         self.session.add(price)
         self.session.commit()
 
-    def _ensure_brand(self, product: Product, model: ProductModel) -> None:
+    def _ensure_brand(self, product: ProductDM, model: ProductModel) -> None:
         brand = self.session.query(Brand).filter_by(name=product.brand).first()
         if not brand:
             brand = Brand(name=product.brand)
@@ -115,7 +115,7 @@ class ProductRepository(IProductRepository):
             self.session.commit()
         model.brand = brand
 
-    def _ensure_categories(self, product: Product, model: ProductModel) -> None:
+    def _ensure_categories(self, product: ProductDM, model: ProductModel) -> None:
         for cat_name in product.categories or []:
             category = self.session.query(Category).filter_by(name=cat_name).first()
             if not category:
@@ -124,14 +124,14 @@ class ProductRepository(IProductRepository):
                 self.session.commit()
             model.categories.append(category)
 
-    def _ensure_media(self, product: Product, model: ProductModel) -> None:
+    def _ensure_media(self, product: ProductDM, model: ProductModel) -> None:
         for url in product.media_urls or []:
             media = Media(product_id=model.id, type="image", url=url)
             self.session.add(media)
         self.session.commit()
 
     # --- Преобразование ORM -> доменная сущность ---
-    def _to_entity(self, model: ProductModel) -> Product:
+    def _to_entity(self, model: ProductModel) -> ProductDM:
         latest_price = (
             self.session.query(Price)
             .filter(Price.product_id == model.id)
@@ -139,7 +139,7 @@ class ProductRepository(IProductRepository):
             .first()
         )
 
-        return Product(
+        return ProductDM(
             id=model.id,
             name=model.name,
             price=latest_price.price if latest_price else None,

@@ -2,7 +2,7 @@ from typing import Iterable, List
 
 import msgspec
 
-from products.domain.entities import Product
+from products.domain.entities import ProductDM
 
 
 class ProductDTO(msgspec.Struct):
@@ -17,7 +17,7 @@ class ProductDTO(msgspec.Struct):
     currency: str | None = None
 
     @classmethod
-    def from_entity(cls, product: Product) -> "ProductDTO":
+    def from_entity(cls, product: ProductDM) -> "ProductDTO":
         """
         Маппинг из доменной сущности Product в DTO.
         """
@@ -33,5 +33,5 @@ class ProductDTO(msgspec.Struct):
         )
 
     @classmethod
-    def from_iterable(cls, products: Iterable[Product]) -> list["ProductDTO"]:
+    def from_iterable(cls, products: Iterable[ProductDM]) -> list["ProductDTO"]:
         return [cls.from_entity(p) for p in products]

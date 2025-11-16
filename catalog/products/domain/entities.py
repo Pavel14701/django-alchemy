@@ -3,7 +3,7 @@ from typing import List, Optional
 
 
 @dataclass
-class Product:
+class ProductDM:
     id: int
     name: str
     price: Optional[float] = None
