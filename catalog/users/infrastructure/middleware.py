@@ -14,4 +14,8 @@ class ServiceErrorMiddleware:
         try:
             return self.get_response(request)
         except ServiceError as e:
-            return JsonResponse({"error": str(e)}, status=e.status_code)
+            # отдаём только имя класса и статус-код
+            return JsonResponse(
+                {"error": e.__class__.__name__},
+                status=e.status_code
+            )
