@@ -7,7 +7,7 @@ The architecture follows *Clean Architecture* principles, with clear separation 
 
 ## 🚀 Features
 
-- Django as the entry point (ASGI/Wsgi, middleware, urls, settings).
+- Django as the entry point (ASGI/WSGI, middleware, urls, settings).
 - SQLAlchemy instead of the default Django ORM.
 - Alembic migrations (`migrations/versions`).
 - Redis for session storage.
